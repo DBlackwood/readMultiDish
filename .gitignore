@@ -1,0 +1,6 @@
+/venv/
+/videos/
+*~
+.ipynb_checkpoints/
+/test*/data/
+*.m
