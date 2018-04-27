@@ -1,0 +1,1 @@
+offsetx=20:offsety=10

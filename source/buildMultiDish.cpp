@@ -88,17 +88,17 @@ json makeJson(const string& dir) {
   string filePath, fileName, line;
   unsigned long len, lngth;
   StructDirListing mainDir, subDir;
-  json subj, mainj, jfile;
-  vector<json> bigFiles, subFiles, subDishes;
+  json subj, mainj, superDishFiles, subDishFiles;
+  vector<json> subDishes;
   vector<string> offsetPair;
   string fname, fdata;
   stringstream buffer;
 
-  if (true) {    //should be test to see that it is a file. Skipping I need to get done.
+  if (true) {    //should be test to see that it is a file. Skipping I need this working. then put in Avida
     //filePathName = dir + "/entryname";
     filePath = dir + "/";
     mainDir = GetFilesInDirectory(filePath);
-    cout << "main; filePath = " << filePath << endl;
+    //cout << "main; filePath = " << filePath << endl;
     mainj["amend"] = "false";
     mainj["name"] = "importMultiDish";
     mainj["type"] = "addEvent";
@@ -108,10 +108,10 @@ json makeJson(const string& dir) {
       cout << "Main: " << ii << "  " << mainDir.isdir[ii] << "   " << mainDir.name[ii]  << "\n";    //debug
       if (mainDir.isdir[ii]) {
         //process subfoler
-        filePath = filePath = dir + "/" + mainDir.name[ii] + "/";
+        filePath = dir + "/" + mainDir.name[ii] + "/";
         cout << "Main isdir=1; filePath = " << filePath << endl;
         clearDirStuct(subDir);
-        subFiles.clear();
+        subDishFiles.clear();
         subj.clear();
         subDir = GetFilesInDirectory(filePath);
         lngth = subDir.name.size();
@@ -121,8 +121,9 @@ json makeJson(const string& dir) {
           if (!subDir.isdir[jj]) {
             fileName = filePath + subDir.name[jj];
             if ("offset.txt" == subDir.name[jj]) {
-              cout << "Process offset.txt file\n";
+              //cout << "Process offset.txt file\n";
               offsetPair = getOffset(fileName);
+              cout << "Offset x=" << offsetPair[0] << "; y=" << offsetPair[1];
             }
             else {
               //https://stackoverflow.com/questions/2912520/read-file-contents-into-a-string-in-c
@@ -131,35 +132,31 @@ json makeJson(const string& dir) {
               string content( (istreambuf_iterator<char>(ifs) ),
                              (istreambuf_iterator<char>()    ) );
               
-              jfile = { {"name",subDir.name[jj]}, {"data", content} };
-              subFiles.push_back(jfile);
+              //jfile = { {"name",subDir.name[jj]}, {"data", content} };
+              subDishFiles[subDir.name[jj]] = content;
             }
           }
+          else cout << "isdir = true";
         }  //end subDish;
         
         subj["xpos"] = offsetPair[0];
         subj["ypos"] = offsetPair[1];
-        subj["files"] = subFiles;
+        subj["files"] = subDishFiles;
         subDishes.push_back(subj);
       }
       else     //its a superdish file
       {
-        fileName = filePath + mainDir.name[ii];
-        //cout << "file"  << ii << " is " << fileName << endl;
-        //https://stackoverflow.com/questions/2602013/read-whole-ascii-file-into-c-stdstring
-//        ifstream myfile(fileName.c_str());
-//        buffer << myfile.rdbuf();
-//        fdata = buffer.str();
+        fileName = dir + "/" + mainDir.name[ii];
+        cout << "file"  << ii << " is " << fileName << endl;
         
         ifstream ifs(fileName);
         string content( (istreambuf_iterator<char>(ifs) ),
                         (istreambuf_iterator<char>()    ) );
         //cout << "content is\n" << content << "\n";
-        jfile = { {"name",mainDir.name[ii]}, {"data", content} };
-        bigFiles.push_back(jfile);
+        superDishFiles[mainDir.name[ii]] = content;
       }
-    }
-    mainj["superDishFiles"] = bigFiles;
+    }  // end multidish
+    mainj["superDishFiles"] = superDishFiles;
     mainj["subDishes"] = subDishes;
 //    cout << "\n---------------------------------------------------------------\n";
 //    cout << mainj.dump();
@@ -169,4 +166,10 @@ json makeJson(const string& dir) {
   
  return mainj;
 }
+
+//---------------------------- stuff looked up, but not using ------------------------------------
+        //https://stackoverflow.com/questions/2602013/read-whole-ascii-file-into-c-stdstring
+//        ifstream myfile(fileName.c_str());
+//        buffer << myfile.rdbuf();
+//        fdata = buffer.str();
 

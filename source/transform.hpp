@@ -19,22 +19,31 @@
 using namespace std;
 using json = nlohmann::json;
 
-struct StructAvida_cfg
+struct StructWorldTriplet
 {
   int xx;
   int yy;
+  int nn;
 };
 
-struct StructWorldDim
+struct StructWorldData
 {
-  int xx;
-  int yy;
+  StructWorldTriplet main;
+  StructWorldTriplet pos;  //for position or offset
+  StructWorldTriplet sub;
 };
+
+struct StructIDpair
+{
+  int ownID;
+  int parentID;
+};
+using idmap = map<int, unsigned long>;
 
 using idmap = map<int, unsigned long>;
 
 vector<string> getOffset(const string& content);
-StructAvida_cfg getAvidaConfig(const string &data);
-string proccessMultiDish(json mDish);
+json proccessMultiDish(json mDish, vector<string> &names);
+idmap makeIDdict(const string &fileData, unsigned long &startID, string &fileHeader);
 
 #endif /* transform_hpp */

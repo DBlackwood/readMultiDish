@@ -108,9 +108,9 @@ string processSubDish(const string findex, json jsubDish) {
   return "dummy";
 }
 
-StructWorldTriplet getWorldSize(const string &fileData) {
+StructXYpair getWorldSize(const string &fileData) {
   cout << "\nIN getWorldSize ---------------------------\n";
-  StructWorldTriplet worldxy;
+  StructXYpair worldxy;
   smatch matcher;
   vector<string> words;
   string line;
@@ -132,10 +132,7 @@ StructWorldTriplet getWorldSize(const string &fileData) {
         worldxy.yy = atoi(matcher.str(1).c_str());
         found++;
       }
-      if (1 < found) {
-        worldxy.nn = worldxy.xx * worldxy.yy;
-        return worldxy;
-      }
+      if (1 < found) return worldxy;
     }  //if not # comment line
   }
   return worldxy;
@@ -146,7 +143,7 @@ int GetID (const string& aline)
   smatch matcher;
   auto rexpr = regex("[\\S]+");  //We want to search for all non-white space
   regex_search(aline, matcher, rexpr);
-  //cout << matcher[0] << "~ ";
+  cout << matcher[0] << "~ ";
   int ownID = stoi(matcher[0]);
   /*  if we wanted all the words
    vector<string> words;
@@ -178,10 +175,10 @@ idmap makeIDdict(string &fileData, unsigned long &startID, string &fileHeader){
     }
     else if (0 == startID) {
       fileHeader += line + "\n";
-      //cout << line << endl;
+      cout << line << endl;
     }
   }//end for:  we now have a list of IDs in the file
-  //cout << endl;
+  cout << endl;
   
   //cout << "\n\nBefore Sort: ";
   //for (auto wrd : ownIDv) { cout << wrd << " ";}
@@ -225,70 +222,57 @@ unsigned long GetNewID(const int& key, const idmap& IDmap)
   return tmpNum;
 }
 
-//------------------------------------------------------------------------------- getShiftedIndex --
-int getShiftedIndex(string numstr, StructWorldData worldInfo){
+//------------------------------------------------------------------------------- getNewPosition --
+string getNewPosition(string places, StructPosSize worldInfo){
+  cout << "\nIN getNewPosition:  \n";
+  string rline = "";           //replacement line
+  smatch matcher;
+  vector<int> linePos;
   int pren, prex, prey, postn, postx, posty;
-
-    cout << "numstr=" << numstr;
+  string subplaces = places;
+  cout << "subplaces=" << subplaces << "; ";
+  auto rexpr = regex("[^,]+");  //We want to search for all non-white space
+  while(regex_search(subplaces, matcher, rexpr))
+  {
+    //cout << matcher[0] << "  ";
+    string numstr = matcher[0];
+    subplaces = matcher.suffix().str();
+    cout << "numstr=" << numstr << ";  ";
     if ( String2Int(numstr, pren) ) {
       prex = pren % worldInfo.sub.xx;
       prey = pren / worldInfo.sub.xx;
       postx = prex + worldInfo.pos.xx;
       posty = prey + worldInfo.pos.yy;
-      postn = posty * worldInfo.main.xx + postx;
-      cout << "_" << pren << "-->" << postn << ";  ";
+      postn = prey * worldInfo.main.xx + prex;
       //need some error checking
-      //cout << "; postn=" << postn << "; world.main.nn=" << worldInfo.main.nn << " ";
-      if (postn < 0 || worldInfo.main.nn <= postn) postn = -1;
-    }
-    else {
-      postn = -1;
-    }
-    return postn;
-}
-
-//------------------------------------------------------------------------------- getNewPosition --
-string getNewPosition(string places, StructWorldData worldInfo){
-  //cout << "\nIN getNewPosition: ";
-  string rline = "";           //replacement line
-  smatch matcher;
-  vector<int> linePos;
-  int postn;
-  string subplaces = places;
-  //cout << "subplaces=" << subplaces << "; ";
-  auto rexpr = regex("[^,]+");  //We want to search for all non-white space
-  while(regex_search(subplaces, matcher, rexpr))
-  {
-    string numstr = matcher[0];
-    postn = getShiftedIndex(numstr, worldInfo);
-    if (0 <= postn) {
       linePos.push_back(postn);
     }
     else {
-      cout << "getShiftedID failed: pre_index=" << postn << ";\n";
+      cout << "intConvert failed: pre_index=" << pren << ";\n";
       return "ERROR";
     }
-    subplaces = matcher.suffix().str();
   }
-  //cout << endl;
+  cout << endl;
   //for loop to create rline;
   // auto actually resolves to the type std::vector<string>::iterator, which is a lot to type
    for (auto it = linePos.begin(); it != linePos.end(); ++it)
    {
-      rline += to_string(*it); //Iterators are derefenced like pointers with the * operator
-      if (it+1 != linePos.end()){  // Here I'm actually using random access ;-) to peek ahead
-         rline += ",";             // Only put in a comma if there is another number
+      rline += *it; //Iterators are derefenced like pointers with the * operator
+      if (it+1 != linePos.end()){  //Here I'm actually using random access ;-) to peek ahead
+         rline += ",";
+      } else{
+         rline += "\n";
       }
    }
-  //cout << "rline=" << rline << ";\n";
+  cout << "rline=" << rline << ";\n";
   return rline;
 }
 
 //--------------------------------------------------------------------------- makeReplacementLine --
 //  makes a replacement line for details.spop
-string makeReplacementLine (const string& aline, const idmap& IDmap, StructWorldData worldInfo)
+string makeReplacementLine (const string& aline, const idmap& IDmap, StructPosSize worldInfo)
 {
-  //cout << "In makeReplacementLine: ";
+  cout << "In makeReplacementLine: ";
   StructIDpair idPair;
   string newline = "";
   smatch matcher;
@@ -340,12 +324,12 @@ string makeReplacementLine (const string& aline, const idmap& IDmap, StructWorld
   return newline;
 }
 
-//---------------------------------------------------------------------------- string MakeNewSpop --
-string MakeNewSpop(const idmap& dict, const string& fileData, StructWorldData worldInfo)
+//-------------------------------------------------------------------------------- string MakeNewSpop --
+string MakeNewSpop (const idmap& dict, const string& fileData, string fileHeader, StructPosSize worldInfo)
 {
-  cout << "\n\n\nin MakeNewSpop \n";
+  cout << "\nin MakeNewSpop \n";
   string line, newline;
-  string newfile = "";
+  string newfile = fileHeader;
   vector<string> ownIDv, parentIDv;
   
   vector<string> lines = getLines(fileData);
@@ -354,7 +338,6 @@ string MakeNewSpop(const idmap& dict, const string& fileData, StructWorldData wo
     //cout << line.substr(0, 1) << ": size=" << size << ": " << line << "\n";
     if ("#" != line.substr(0, 1) && 5 < size) {
       newline = makeReplacementLine(line, dict, worldInfo);
-      //cout << "old line = \n"<< line << "\nnew line is \n" << newline << endl;
       if ("dead" != newline)
       {
         newfile += newline + "\n";
@@ -364,92 +347,19 @@ string MakeNewSpop(const idmap& dict, const string& fileData, StructWorldData wo
   return newfile;
 }
 
-string findCladeName(string name, int number, vector<string> &names){
-  int num = number + 1;
-  string newName;
-  string aName = name + "-" + to_string(num);
-  if (find(names.begin(), names.end(), aName) != names.end()) {
-    newName = findCladeName(aName, num, names);
-  }
-  else { newName = aName; }
-  return newName;
-}
-
-string getCladeName(string aname, vector<string> &names){
-  string theName;
-  if (find(names.begin(), names.end(), aname) != names.end()){
-    theName = findCladeName(aname, 1, names);
-  }
-  else theName = aname;
-  names.push_back(theName);
-  return theName;
-}
-
-string makeCladeLine(const string& aline, StructWorldData worldInfo, vector<string> &names) {
-  string newline = "";
-  smatch matcher;
-  vector<string> words;
-  string subline = aline;
-  auto rexpr = regex("[\\S]+");  //We want to search for all non-white space
-  while(regex_search(subline, matcher, rexpr))
-  {
-    words.push_back(matcher[0]);
-    subline = matcher.suffix().str();
-  }
-  //cout << "There are " << words.size() << " words stored in the vector." << endl;
-  if (1 < words.size() ) {
-    string aname = getCladeName(words[0], names);
-    string newLocations = getNewPosition(words[1], worldInfo);
-    words[1] = newLocations;
-  }
-  newline = words[0] + " " + words[1];
-  
-  return newline;
-}
-
-string MakeNewClade(const string& fileData, StructWorldData worldInfo, string &cladeHeader, vector<string> &names) {
-  cout << "nin MakeNewClade \n";
-  string line="", newline="";
-  string newfile = "";
-  bool makeHeaderFlag = true;
-  if (1 < cladeHeader.size()) makeHeaderFlag = false;
-  
-  vector<string> lines = getLines(fileData);
-  for (auto line : lines) {
-    auto size = line.size();
-    cout << "size=" << size << "; line is\n" << line << endl;
-    //cout << line.substr(0, 1) << ": size=" << size << ": " << line << "\n";
-    if ("#" == line.substr(0, 1)) {
-      //make header
-      if (makeHeaderFlag) {
-        cladeHeader += line + "\n";
-      }
-    }
-    else if (2 < size){
-      //make new line
-      newline = makeCladeLine(line, worldInfo, names);
-      cout << "oldline|" << line << "\n" << "newline=" << newline << endl;
-      newfile += newline + "\n";
-    }
-  }
-  cout << "The newfile is \n" << newfile;
-  return newfile;
-}
-
 // Returns a new json structure with the composit files:
 // details.spop;
-json proccessMultiDish(json mDish, vector<string> &names){
+json proccessMultiDish(json mDish) {
   cout << "\n\n\n------------In proccessMultiDish---------------------------------------------------------------\n\n" << flush;
-  StructWorldData worldInfo;
-  string new_spop_file="", new_clade_file="";
-  string spop_header = "", cladeHeader="";
+  StructPosSize worldInfo;
+  string new_spop_file;
   json nWorld, nfile;
   vector<json> vfiles;
   unsigned long startID= 0;  //the first organims ID in a file.
   json mainFiles = mDish["superDishFiles"];
 
   worldInfo.main = getWorldSize(mainFiles["avida.cfg"]);
-  cout << "Main Size: x=" << worldInfo.main.xx << ";  y=" << worldInfo.main.yy << ";  n=" << worldInfo.main.nn << endl;
+  cout << "Main Size: x=" << worldInfo.main.xx << ";  y=" << worldInfo.main.yy << endl;
 
   vector<json> subDishes = mDish["subDishes"];
   
@@ -461,42 +371,32 @@ json proccessMultiDish(json mDish, vector<string> &names){
     worldInfo.pos.xx = stoi(subDishes[ii]["xpos"].get<string>());
     worldInfo.pos.yy = stoi(subDishes[ii]["ypos"].get<string>());
     cout << "subDish position x=" << worldInfo.pos.xx << "; y="  << worldInfo.pos.yy << endl;
-    worldInfo.sub = getWorldSize(subDishes[ii]["files"]["avida.cfg"]);
+    worldInfo.sub = getWorldSize(mainFiles["avida.cfg"]);
     cout << "subDish    size: x=" << worldInfo.sub.xx << "; y=" << worldInfo.sub.yy << endl;
     //if
     
     // create  new detail.spop file
-    string sPopData = subDishes[ii]["files"]["detail.spop"];
-    idmap idDict = makeIDdict(sPopData, startID, spop_header);
+    string fileData = subDishes[ii]["files"]["detail.spop"];
+    string fileHeader = "";
+    idmap idDict = makeIDdict(fileData, startID, fileHeader);
     cout << "\n\nbefore call MakeNewSpop\n\n";
-    new_spop_file = new_spop_file + MakeNewSpop(idDict, sPopData, worldInfo);
-    cout << "\n\n\nstartID=" << startID << endl; //"; new_spop_file=\n" << new_spop_file << endl;
+    new_spop_file += MakeNewSpop (idDict, fileData, fileHeader, worldInfo);
+    cout << "startID=" << startID << "; ";
     
-    // create new clade.ssg file
-    string cladeData = subDishes[ii]["files"]["clade.ssg"];
-    new_clade_file = new_clade_file + MakeNewClade(cladeData, worldInfo, cladeHeader, names);
-    //cout << "\nClade Header is \n" << cladeHeader << endl;
-    cout << "\nnew_clade_file is \n" << new_clade_file << endl;
-
+    // create new clade.ssg
   }
-  new_spop_file = spop_header + new_spop_file;
   nfile["name"] = "detail.spop";
   nfile["data"] = new_spop_file;
   vfiles.push_back(nfile);
   cout << "\n\nNew detail.spop file:\n" << new_spop_file << endl;
-  new_clade_file = cladeHeader + new_clade_file;
-  nfile["name"] = "clade.ssg";
-  nfile["data"] = new_clade_file;
-  vfiles.push_back(nfile);
-  cout << "\n\nNew clade.ssg file:\n" << new_clade_file << endl;
-
+  
+  
   
   // ------- build new world (populated dish) json object
   nWorld["amend"] = "false";
   nWorld["name"] = "importExpr";
   nWorld["type"] = "addEvent";
   vector<string> fnames = {"avida.cfg"
-    , "clade.ssg"
     , "environment.cfg"
     , "events.cfg"
     , "instset.cfg"};

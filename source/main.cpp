@@ -24,14 +24,22 @@ using json = nlohmann::json;
 int main(int argc, const char * argv[]) {
 
   json multiDish;
-  
+  vector<string> names;
+
   multiDish = makeJson("m0");
   cout << "---------------------------------------------------------------\n";
+  cout << "a multiDish json object" << endl;
   cout << multiDish.dump();
   cout << "\n---------------------------------------------------------------\n";
   
-  string out = proccessMultiDish(multiDish);
+  cout << "Before call: proccessMultiDish(multiDish)\n";
+  json out = proccessMultiDish(multiDish, names);
+  cout << "After call: proccessMultiDish(multiDish)\n";
 
+  cout << "---------------------------------------------------------------\n";
+  cout << "a world json object" << endl;
+  cout << out.dump();
+  cout << "\n---------------------------------------------------------------\n";
 
 //Example way to split a string with a character
 //https://stackoverflow.com/questions/14265581/parse-split-a-string-in-c-using-string-delimiter-standard-c/14266139
